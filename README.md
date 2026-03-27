@@ -34,7 +34,7 @@ Open http://127.0.0.1:8200 in your browser.
 ### From source
 
 ```bash
-git clone https://github.com/yourname/querypad.git
+git clone https://github.com/pavlenchichikov/querypad.git
 cd querypad
 pip install -e ".[dev]"
 querypad --reload

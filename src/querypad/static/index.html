@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QueryPad — SQL Notebook</title>
+    <link rel="stylesheet" href="/static/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+<div class="app">
+    <!-- Header -->
+    <header class="header">
+        <h1>QueryPad</h1>
+        <div class="header-center">
+            <select id="active-connection" onchange="onConnectionChange()">
+                <option value="">-- No Connection --</option>
+            </select>
+            <span id="notebook-title" style="font-size:14px;color:var(--text-dim)">No notebook</span>
+        </div>
+        <div class="header-actions">
+            <button class="btn" onclick="showConnectionModal()">Add Connection</button>
+            <button class="btn" onclick="showNewNotebookModal()">New Notebook</button>
+            <button class="btn btn-primary" onclick="runAllCells()">Run All</button>
+            <button class="btn" onclick="saveNotebook()">Save</button>
+            <button class="btn" onclick="showSettingsModal()">Settings</button>
+        </div>
+    </header>
+
+    <!-- Sidebar -->
+    <aside class="sidebar">
+        <!-- Notebooks section -->
+        <div class="sidebar-section">
+            <h3>Notebooks</h3>
+            <div id="notebooks-list"></div>
+        </div>
+
+        <!-- Schema section -->
+        <div class="sidebar-section" style="flex:1;overflow-y:auto">
+            <h3>Schema</h3>
+            <div id="schema-tree"></div>
+        </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="main" id="main-content">
+        <div class="empty-state" id="empty-state">
+            <h2>Welcome to QueryPad</h2>
+            <p>Connect a database and create a notebook to get started.</p>
+            <button class="btn btn-primary" onclick="showConnectionModal()">Add Connection</button>
+        </div>
+        <div id="cells-container" style="display:none"></div>
+        <div id="add-cell-bar" class="add-cell-bar" style="display:none">
+            <button class="btn btn-sm" onclick="addCell('sql')">+ SQL</button>
+            <button class="btn btn-sm" onclick="addCell('ai')">+ AI Query</button>
+            <button class="btn btn-sm" onclick="addCell('markdown')">+ Markdown</button>
+        </div>
+    </main>
+</div>
+
+<!-- Modal container -->
+<div id="modal-root"></div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>

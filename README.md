@@ -11,12 +11,13 @@ Write SQL, get instant results, and let AI generate queries from plain English. 
 
 - **Multi-cell notebooks** — mix SQL, Markdown, and AI cells in one document
 - **AI-powered SQL generation** — describe what you need in natural language, get SQL back
+- **Local ML model** — self-learning offline SQL generation, no API key required
 - **Multiple database connections** — connect to SQLite, PostgreSQL, MySQL, ClickHouse, and more
 - **Schema browser** — explore tables and columns in the sidebar
 - **Instant results** — run queries with Ctrl+Enter, see data tables immediately
 - **Chart visualization** — bar, line, pie, doughnut charts from query results
 - **Notebook persistence** — auto-save notebooks as JSON, reopen anytime
-- **AI providers** — supports Anthropic (Claude) and OpenAI (GPT) APIs
+- **AI providers** — supports Anthropic (Claude), OpenAI (GPT), and Local ML
 - **Dark UI** — modern dark theme optimized for data work
 
 ## Quick Start
@@ -67,11 +68,32 @@ Click **New Notebook**, give it a name, and start adding cells.
 
 ### 4. AI assistant
 
+QueryPad offers three AI providers — choose in **Settings**:
+
+| Provider | Requires API Key | Offline | Self-Learning |
+|---|---|---|---|
+| **Local ML** | No | Yes | Yes |
+| Anthropic (Claude) | Yes | No | No* |
+| OpenAI (GPT) | Yes | No | No* |
+
+\* Online providers automatically feed successful results into the Local ML model, so it learns in the background.
+
+**Using online AI (Claude / GPT):**
+
 1. Go to **Settings** and enter your API key (Anthropic or OpenAI)
 2. Add an **AI Query** cell
 3. Type your question: *"Show top 5 departments by average salary"*
 4. Click **Generate SQL** — the AI reads your schema and writes the query
 5. Click **Run This Query** to execute it
+
+**Using Local ML (no API key needed):**
+
+1. Go to **Settings**, select **Local ML (offline, self-learning)**
+2. The model works immediately with built-in intent detection (count, top N, average, sum, group by, join, filter, distinct)
+3. Every query you run teaches the model — it gets smarter over time
+4. Similar past questions are shown alongside generated SQL with confidence scores
+
+If no API key is configured, QueryPad automatically falls back to Local ML.
 
 ### 5. Charts
 
@@ -88,6 +110,8 @@ After running a SQL cell, click **Chart** to visualize results as bar, line, pie
 | `GET` | `/api/connections/{id}/schema` | Get schema as text |
 | `POST` | `/api/query` | Execute SQL query |
 | `POST` | `/api/ai/generate` | Generate SQL from natural language |
+| `POST` | `/api/ai/learn` | Teach local ML from a query pair |
+| `GET` | `/api/ai/stats` | Local ML model statistics |
 | `GET` | `/api/notebooks` | List notebooks |
 | `POST` | `/api/notebooks` | Create notebook |
 | `GET` | `/api/notebooks/{id}` | Get notebook |
@@ -116,6 +140,16 @@ ruff check src/
 querypad --reload
 ```
 
+## How Local ML Works
+
+The local model uses a three-tier generation strategy:
+
+1. **Similarity search** (highest confidence) — TF-IDF vectorizes your question and finds the closest match from past queries via cosine similarity. Adapts the matched SQL to your current schema.
+2. **Intent + schema matching** — Detects the query intent (count, top N, average, group by, etc.) from keywords, then maps it to the best matching table and column from your schema.
+3. **Fallback** — Returns a basic `SELECT * FROM table LIMIT 100` when confidence is too low.
+
+Training data is stored in `ml_data/query_history.jsonl`. Learned intent patterns persist in `ml_data/learned_patterns.json`. Both files grow automatically as you use QueryPad.
+
 ## Project Structure
 
 ```
@@ -125,8 +159,10 @@ querypad/
 │   ├── server.py      # FastAPI application
 │   ├── database.py    # Connection manager & query execution
 │   ├── notebook.py    # Notebook storage (JSON)
-│   ├── ai.py          # LLM integration (Anthropic/OpenAI)
+│   ├── ai.py          # LLM integration (Anthropic/OpenAI/Local ML)
+│   ├── ml_local.py    # Self-learning local ML model
 │   └── static/        # Web UI (HTML/CSS/JS)
+├── ml_data/           # Auto-created: query history & learned patterns
 ├── tests/
 ├── pyproject.toml
 └── README.md

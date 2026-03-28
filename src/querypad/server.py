@@ -13,7 +13,7 @@ from fastapi import FastAPI
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
-from querypad.ai import generate_sql
+from querypad.ai import generate_sql, learn_from_execution, get_local_stats
 from querypad.database import DatabaseManager
 from querypad.notebook import Cell, Notebook, NotebookStore
 
@@ -100,6 +100,40 @@ async def ai_generate(payload: dict[str, Any]):
         model=_settings.get("ai_model") or None,
     )
     return asdict(result)
+
+
+@app.post("/api/ai/learn")
+async def ai_learn(payload: dict[str, Any]):
+    """Teach local ML model from a successful query execution."""
+    conn_id = payload.get("connection_id", "")
+    question = payload.get("question", "")
+    sql = payload.get("sql", "")
+    row_count = payload.get("row_count", 0)
+
+    if not question or not sql:
+        return {"ok": False, "error": "question and sql required"}
+
+    schema = ""
+    dialect = "sqlite"
+    if conn_id:
+        try:
+            schema = db_manager.get_schema_text(conn_id)
+            conn_info = db_manager._connections.get(conn_id)
+            dialect = conn_info.db_type if conn_info else "sqlite"
+        except Exception:
+            pass
+
+    learn_from_execution(
+        question=question, sql=sql, schema=schema,
+        dialect=dialect, row_count=row_count,
+    )
+    return {"ok": True}
+
+
+@app.get("/api/ai/stats")
+async def ai_stats():
+    """Return local ML model statistics."""
+    return get_local_stats()
 
 
 # ── Notebook management ─────────────────────────────────────────

@@ -355,6 +355,20 @@ async function runCell(index) {
         const data = await res.json();
         cell.result = data;
         renderResult(cell.id, data);
+
+        // Teach local ML from successful AI-generated queries
+        if (!data.error && cell.cell_type === "ai" && cell._aiQuestion) {
+            fetch("/api/ai/learn", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    connection_id: activeConnectionId,
+                    question: cell._aiQuestion,
+                    sql: sql,
+                    row_count: data.row_count || 0,
+                }),
+            }).catch(() => {});  // fire-and-forget
+        }
     } catch (err) {
         resultDiv.innerHTML = `<div class="cell-error">${err.message}</div>`;
     }
@@ -434,9 +448,33 @@ async function aiGenerate(index) {
         }
 
         cell._generatedSql = data.sql;
+        cell._aiQuestion = question;
+
+        // Build confidence badge
+        let confBadge = "";
+        if (data.confidence > 0) {
+            const pct = Math.round(data.confidence * 100);
+            const color = pct >= 70 ? "#38a169" : pct >= 40 ? "#ed8936" : "#e53e3e";
+            confBadge = ` · <span style="color:${color}">confidence: ${pct}%</span>`;
+        }
+        let sourceBadge = data.source ? ` · <span style="color:var(--text-dim)">${data.source}</span>` : "";
+
+        // Show similar past questions if any
+        let similarHtml = "";
+        if (data.similar_questions && data.similar_questions.length > 0) {
+            const items = data.similar_questions.map(sq =>
+                `<div style="font-size:11px;color:var(--text-dim);padding:2px 0">↳ "${escapeHtml(sq.question)}" (${Math.round(sq.similarity * 100)}%)</div>`
+            ).join("");
+            similarHtml = `<div style="margin-top:6px;padding:6px 8px;background:var(--surface);border-radius:4px;border-left:3px solid #6c5ce7">
+                <div style="font-size:10px;color:#6c5ce7;font-weight:600;margin-bottom:2px">Similar past queries:</div>
+                ${items}
+            </div>`;
+        }
+
         resultDiv.innerHTML = `
-            <div style="margin-bottom:8px;color:var(--text-dim);font-size:11px">Generated SQL (${data.model}):</div>
+            <div style="margin-bottom:8px;color:var(--text-dim);font-size:11px">Generated SQL (${data.model}${confBadge}${sourceBadge}):</div>
             <pre style="background:var(--bg);padding:10px;border-radius:6px;font-size:12px;overflow-x:auto">${escapeHtml(data.sql)}</pre>
+            ${similarHtml}
             <div style="margin-top:8px">
                 <button class="btn btn-sm btn-success" onclick="runCell(${index})">Run This Query</button>
                 <button class="btn btn-sm" onclick="copySql(${index})">Copy SQL</button>
@@ -593,29 +631,57 @@ function simpleMarkdown(text) {
 /* ── Settings ─────────────────────────────────────────────── */
 
 function showSettingsModal() {
-    fetch("/api/settings").then(r => r.json()).then(settings => {
+    Promise.all([
+        fetch("/api/settings").then(r => r.json()),
+        fetch("/api/ai/stats").then(r => r.json()).catch(() => ({})),
+    ]).then(([settings, mlStats]) => {
+        const mlExamples = mlStats.total_examples || 0;
+        const mlVocab = mlStats.vocab_size || 0;
+        const mlPatterns = mlStats.patterns_count || 0;
+        const intentDist = mlStats.intent_distribution || {};
+        const intentHtml = Object.entries(intentDist)
+            .map(([k, v]) => `<span style="margin-right:8px">${k}: ${v}</span>`)
+            .join("") || "No data yet";
+
         document.getElementById("modal-root").innerHTML = `
             <div class="modal-overlay" onclick="if(event.target===this)closeModal()">
-                <div class="modal">
+                <div class="modal" style="max-width:520px">
                     <h2>Settings</h2>
                     <div class="form-group">
                         <label>AI Provider</label>
-                        <select id="set-provider">
+                        <select id="set-provider" onchange="toggleApiKeyField()">
+                            <option value="local" ${settings.ai_provider === "local" ? "selected" : ""}>🧠 Local ML (offline, self-learning)</option>
                             <option value="anthropic" ${settings.ai_provider === "anthropic" ? "selected" : ""}>Anthropic (Claude)</option>
                             <option value="openai" ${settings.ai_provider === "openai" ? "selected" : ""}>OpenAI (GPT)</option>
                         </select>
                     </div>
-                    <div class="form-group">
+                    <div id="api-key-group" class="form-group" style="${settings.ai_provider === 'local' ? 'display:none' : ''}">
                         <label>API Key</label>
                         <input type="password" id="set-apikey" placeholder="sk-...">
                         <div style="font-size:11px;color:var(--text-dim);margin-top:4px">
                             Current: ${settings.ai_api_key || 'not set'}
                         </div>
                     </div>
-                    <div class="form-group">
+                    <div id="model-group" class="form-group" style="${settings.ai_provider === 'local' ? 'display:none' : ''}">
                         <label>Model (optional)</label>
                         <input type="text" id="set-model" value="${settings.ai_model || ''}" placeholder="Leave blank for default">
                     </div>
+
+                    <div style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
+                        <div style="font-weight:600;margin-bottom:8px">🧠 Local ML Model</div>
+                        <div style="font-size:12px;color:var(--text-dim);line-height:1.6">
+                            <div>Training examples: <strong style="color:var(--text)">${mlExamples}</strong></div>
+                            <div>Vocabulary: <strong style="color:var(--text)">${mlVocab}</strong> tokens</div>
+                            <div>Learned patterns: <strong style="color:var(--text)">${mlPatterns}</strong> intents</div>
+                            <div style="margin-top:4px">Intent distribution: ${intentHtml}</div>
+                            <div style="margin-top:8px;font-style:italic;color:var(--text-dim)">
+                                ${mlExamples === 0
+                                    ? "Model learns automatically from every query you run — both from API results and manual SQL."
+                                    : `Model trained on ${mlExamples} queries. The more you use it, the smarter it gets.`}
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="btn-row">
                         <button class="btn" onclick="closeModal()">Cancel</button>
                         <button class="btn btn-primary" onclick="saveSettings()">Save</button>
@@ -624,6 +690,13 @@ function showSettingsModal() {
             </div>
         `;
     });
+}
+
+function toggleApiKeyField() {
+    const provider = document.getElementById("set-provider").value;
+    const isLocal = provider === "local";
+    document.getElementById("api-key-group").style.display = isLocal ? "none" : "";
+    document.getElementById("model-group").style.display = isLocal ? "none" : "";
 }
 
 async function saveSettings() {

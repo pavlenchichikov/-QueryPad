@@ -1,73 +1,40 @@
 # QueryPad
 
-SQL notebook with a built-in AI assistant. You type a question in plain English, it writes the query. Or just write SQL yourself - either way, results show up instantly.
+A SQL notebook with an AI assistant. Ask a question in plain English and it writes
+the query, or write SQL yourself. Works with SQLite, PostgreSQL, MySQL, ClickHouse,
+and anything SQLAlchemy connects to.
 
-Works with SQLite, PostgreSQL, MySQL, ClickHouse, and anything SQLAlchemy can connect to.
+Cells can be SQL, Markdown or AI. Results show as tables or charts and export to CSV.
+Notebooks are saved as JSON.
 
-## What it does
-
-- Notebooks with SQL, Markdown, and AI cells mixed together
-- AI generates SQL from natural language (Claude, GPT, or a local offline model)
-- The local model learns from every query you run - no API key needed
-- Schema browser so you don't have to memorize table names
-- Charts (bar, line, pie, doughnut) straight from query results
-- Export any result set to CSV
-- Optional read-only mode that blocks INSERT/UPDATE/DELETE/DROP
-- Notebooks auto-save as JSON
-
-## Getting started
+## Run
 
 ```bash
 pip install -e .
-querypad
+querypad          # serves http://127.0.0.1:8200
 ```
 
-Then open http://127.0.0.1:8200.
+Add a connection with a SQLAlchemy URL, e.g. `postgresql://user:pass@host:5432/dbname`
+or `sqlite:///path/to/file.db`.
 
-## Connect a database
+## AI providers
 
-Click **Add Connection** and paste a SQLAlchemy URL:
+Pick one in Settings:
 
-```
-sqlite:///path/to/file.db
-postgresql://user:pass@host:5432/dbname
-mysql+pymysql://user:pass@host:3306/dbname
-clickhouse://user:pass@host:8123/dbname
-```
+- **Local ML** - offline, no key, learns from the queries you run
+- **Claude** / **GPT** - set `ANTHROPIC_API_KEY` / `OPENAI_API_KEY` (or copy `.env.example` to `.env`)
 
-## AI setup
+Without a key it falls back to Local ML. The local model matches your question against
+past ones (TF-IDF + cosine similarity), or failing that maps the detected intent
+(count, top-N, average, group-by) onto your schema. History lives in `ml_data/`.
 
-Three options under **Settings**:
+Enable **read-only mode** in Settings to reject anything but plain queries
+(INSERT / UPDATE / DELETE / DROP) when the AI runs against a real database.
 
-- **Local ML** - works offline, no keys, learns as you go
-- **Claude** - needs `ANTHROPIC_API_KEY`
-- **GPT** - needs `OPENAI_API_KEY`
+## Layout
 
-If no key is set, it falls back to the local model automatically. Online providers also feed successful results back into the local model, so it keeps improving either way.
-
-Keys can be set in **Settings** or via environment variables. Copy `.env.example` to `.env` and fill them in.
-
-Turn on **Read-only mode** in Settings to block any statement that isn't a plain query (INSERT, UPDATE, DELETE, DROP, etc.) - useful when you let the AI run queries against a production database.
-
-## How the local model works
-
-1. Checks past queries for similar questions (TF-IDF + cosine similarity)
-2. If nothing matches well, detects intent (count, top N, average, group by, etc.) and maps it to your schema
-3. Last resort - `SELECT * FROM table LIMIT 100`
-
-Training data lives in `ml_data/` and grows on its own.
-
-## Project structure
-
-```
-src/querypad/
-  server.py       - FastAPI app
-  database.py     - connection manager
-  notebook.py     - notebook storage
-  ai.py           - LLM integration
-  ml_local.py     - local ML model
-  static/         - web UI
-```
+`server.py` API, `database.py` connections, `notebook.py` storage,
+`ai.py` LLM calls, `ml_local.py` offline model, `static/` UI.
 
 ## License
 

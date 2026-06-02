@@ -1,7 +1,5 @@
 """Tests for the FastAPI server endpoints."""
 
-import tempfile
-import os
 
 import pytest
 from httpx import ASGITransport, AsyncClient

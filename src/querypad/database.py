@@ -2,12 +2,37 @@
 
 from __future__ import annotations
 
+import re
 import time
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 
 import pandas as pd
 from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.engine import Engine
+
+# Statement prefixes considered read-only (safe in read-only mode).
+_READ_ONLY_STARTS = ("select", "with", "explain", "show", "describe", "desc", "values")
+_WRITE_KEYWORDS = r"\b(insert|update|delete|drop|create|alter|truncate|replace|merge)\b"
+
+
+def is_write_sql(sql: str) -> bool:
+    """Heuristic check: True if any statement modifies data/schema.
+
+    Used by read-only mode to block writes from AI-generated or manual SQL.
+    Errs toward blocking: a CTE (WITH ...) that wraps a write is treated as a write.
+    """
+    cleaned = re.sub(r"--[^\n]*", " ", sql)
+    cleaned = re.sub(r"/\*.*?\*/", " ", cleaned, flags=re.DOTALL)
+    for stmt in cleaned.split(";"):
+        stmt = stmt.strip()
+        if not stmt:
+            continue
+        first = stmt.split(None, 1)[0].lower()
+        if first not in _READ_ONLY_STARTS:
+            return True
+        if first == "with" and re.search(_WRITE_KEYWORDS, stmt, re.IGNORECASE):
+            return True
+    return False
 
 
 @dataclass
@@ -92,8 +117,15 @@ class DatabaseManager:
             lines.append(f"TABLE {t.name}: {cols}")
         return "\n".join(lines)
 
-    def execute_query(self, conn_id: str, sql: str, limit: int = 500) -> QueryResult:
+    def execute_query(
+        self, conn_id: str, sql: str, limit: int = 500, read_only: bool = False
+    ) -> QueryResult:
         engine = self.get_engine(conn_id)
+        if read_only and is_write_sql(sql):
+            return QueryResult(
+                columns=[], rows=[], row_count=0, elapsed_ms=0.0,
+                error="Read-only mode is on: only SELECT-style queries are allowed.",
+            )
         t0 = time.perf_counter()
         try:
             with engine.connect() as conn:
@@ -126,3 +158,16 @@ class DatabaseManager:
                 columns=[], rows=[], row_count=0,
                 elapsed_ms=elapsed, error=str(exc),
             )
+
+    def query_to_csv(self, conn_id: str, sql: str) -> tuple[str | None, str]:
+        """Run a query and return (error, csv_text). No row limit - exports everything."""
+        engine = self.get_engine(conn_id)
+        try:
+            with engine.connect() as conn:
+                result = conn.execute(text(sql))
+                if not result.returns_rows:
+                    return ("Query returned no rows to export", "")
+                df = pd.DataFrame(result.fetchall(), columns=list(result.keys()))
+                return (None, df.to_csv(index=False))
+        except Exception as exc:
+            return (str(exc), "")

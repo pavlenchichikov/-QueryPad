@@ -15,6 +15,8 @@ env/
 *.db
 *.sqlite
 notebooks/
+uploads/
+ml_data/
 .idea/
 .vscode/
 *.swp

@@ -1,18 +1,18 @@
-/* ── QueryPad Frontend ─────────────────────────────────────── */
+/* QueryPad Frontend */
 
 let currentNotebook = null;
 let connections = [];
 let activeConnectionId = "";
 let cellCounter = 0;
 
-/* ── Init ─────────────────────────────────────────────────── */
+/* Init */
 
 document.addEventListener("DOMContentLoaded", async () => {
     await loadConnections();
     await loadNotebooks();
 });
 
-/* ── Connections ──────────────────────────────────────────── */
+/* Connections */
 
 async function loadConnections() {
     const res = await fetch("/api/connections");
@@ -81,7 +81,7 @@ async function addConnection() {
     }
 }
 
-/* ── Schema tree ──────────────────────────────────────────── */
+/* Schema tree */
 
 async function loadSchema() {
     if (!activeConnectionId) return;
@@ -114,7 +114,7 @@ function toggleColumns(index) {
     el.classList.toggle("open");
 }
 
-/* ── Notebooks ────────────────────────────────────────────── */
+/* Notebooks */
 
 async function loadNotebooks() {
     const res = await fetch("/api/notebooks");
@@ -206,7 +206,7 @@ async function saveNotebook() {
     });
 }
 
-/* ── Cell rendering ───────────────────────────────────────── */
+/* Cell rendering */
 
 function renderCells() {
     const container = document.getElementById("cells-container");
@@ -310,7 +310,7 @@ function collectCellData() {
     });
 }
 
-/* ── Run cell ─────────────────────────────────────────────── */
+/* Run cell */
 
 function handleEditorKey(event, index) {
     if (event.ctrlKey && event.key === "Enter") {
@@ -342,6 +342,7 @@ async function runCell(index) {
     }
 
     if (!sql) return;
+    cell._lastSql = sql;
 
     const resultDiv = document.getElementById(`result-${cell.id}`);
     resultDiv.innerHTML = '<div style="padding:10px;color:var(--text-dim)">Running...</div>';
@@ -416,12 +417,41 @@ function renderResult(cellId, data) {
         <span>${data.columns.length} columns</span>
         <span>${data.elapsed_ms}ms</span>
         ${data.truncated ? '<span style="color:var(--orange)">truncated</span>' : ''}
+        <button class="btn btn-sm" onclick="exportCSV('${cellId}')">Export CSV</button>
     </div>`;
 
     div.innerHTML = html;
 }
 
-/* ── AI generation ────────────────────────────────────────── */
+async function exportCSV(cellId) {
+    const cell = currentNotebook.cells.find(c => c.id === cellId);
+    if (!cell || !cell._lastSql) return;
+    try {
+        const res = await fetch("/api/query/export", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ connection_id: activeConnectionId, sql: cell._lastSql }),
+        });
+        if ((res.headers.get("content-type") || "").includes("application/json")) {
+            const j = await res.json();
+            alert(j.error || "Export failed");
+            return;
+        }
+        const blob = await res.blob();
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.href = url;
+        a.download = "querypad_export.csv";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        URL.revokeObjectURL(url);
+    } catch (err) {
+        alert("Export failed: " + err.message);
+    }
+}
+
+/* AI generation */
 
 async function aiGenerate(index) {
     if (!activeConnectionId) { alert("Select a database connection first"); return; }
@@ -463,7 +493,7 @@ async function aiGenerate(index) {
         let similarHtml = "";
         if (data.similar_questions && data.similar_questions.length > 0) {
             const items = data.similar_questions.map(sq =>
-                `<div style="font-size:11px;color:var(--text-dim);padding:2px 0">↳ "${escapeHtml(sq.question)}" (${Math.round(sq.similarity * 100)}%)</div>`
+                `<div style="font-size:11px;color:var(--text-dim);padding:2px 0">> "${escapeHtml(sq.question)}" (${Math.round(sq.similarity * 100)}%)</div>`
             ).join("");
             similarHtml = `<div style="margin-top:6px;padding:6px 8px;background:var(--surface);border-radius:4px;border-left:3px solid #6c5ce7">
                 <div style="font-size:10px;color:#6c5ce7;font-weight:600;margin-bottom:2px">Similar past queries:</div>
@@ -510,7 +540,7 @@ function insertAsSqlCell(index) {
     renderCells();
 }
 
-/* ── Chart visualization ──────────────────────────────────── */
+/* Chart visualization */
 
 function visualizeCell(index) {
     const cell = currentNotebook.cells[index];
@@ -599,7 +629,7 @@ function renderChartPreview(index) {
     });
 }
 
-/* ── Markdown toggle ──────────────────────────────────────── */
+/* Markdown toggle */
 
 function toggleMarkdown(index) {
     const cell = currentNotebook.cells[index];
@@ -628,7 +658,7 @@ function simpleMarkdown(text) {
         .replace(/\n/g, '<br>');
 }
 
-/* ── Settings ─────────────────────────────────────────────── */
+/* Settings */
 
 function showSettingsModal() {
     Promise.all([
@@ -650,7 +680,7 @@ function showSettingsModal() {
                     <div class="form-group">
                         <label>AI Provider</label>
                         <select id="set-provider" onchange="toggleApiKeyField()">
-                            <option value="local" ${settings.ai_provider === "local" ? "selected" : ""}>🧠 Local ML (offline, self-learning)</option>
+                            <option value="local" ${settings.ai_provider === "local" ? "selected" : ""}>Local ML (offline, self-learning)</option>
                             <option value="anthropic" ${settings.ai_provider === "anthropic" ? "selected" : ""}>Anthropic (Claude)</option>
                             <option value="openai" ${settings.ai_provider === "openai" ? "selected" : ""}>OpenAI (GPT)</option>
                         </select>
@@ -666,9 +696,15 @@ function showSettingsModal() {
                         <label>Model (optional)</label>
                         <input type="text" id="set-model" value="${settings.ai_model || ''}" placeholder="Leave blank for default">
                     </div>
+                    <div class="form-group">
+                        <label style="display:flex;align-items:center;gap:8px;cursor:pointer">
+                            <input type="checkbox" id="set-readonly" ${settings.read_only ? "checked" : ""} style="width:auto">
+                            Read-only mode (block INSERT / UPDATE / DELETE / DROP)
+                        </label>
+                    </div>
 
                     <div style="margin-top:16px;padding:12px;background:var(--bg);border-radius:8px;border:1px solid var(--border)">
-                        <div style="font-weight:600;margin-bottom:8px">🧠 Local ML Model</div>
+                        <div style="font-weight:600;margin-bottom:8px">Local ML Model</div>
                         <div style="font-size:12px;color:var(--text-dim);line-height:1.6">
                             <div>Training examples: <strong style="color:var(--text)">${mlExamples}</strong></div>
                             <div>Vocabulary: <strong style="color:var(--text)">${mlVocab}</strong> tokens</div>
@@ -676,7 +712,7 @@ function showSettingsModal() {
                             <div style="margin-top:4px">Intent distribution: ${intentHtml}</div>
                             <div style="margin-top:8px;font-style:italic;color:var(--text-dim)">
                                 ${mlExamples === 0
-                                    ? "Model learns automatically from every query you run — both from API results and manual SQL."
+                                    ? "Model learns automatically from every query you run - both from API results and manual SQL."
                                     : `Model trained on ${mlExamples} queries. The more you use it, the smarter it gets.`}
                             </div>
                         </div>
@@ -703,6 +739,7 @@ async function saveSettings() {
     const payload = {
         ai_provider: document.getElementById("set-provider").value,
         ai_model: document.getElementById("set-model").value,
+        read_only: document.getElementById("set-readonly").checked,
     };
     const apiKey = document.getElementById("set-apikey").value;
     if (apiKey) payload.ai_api_key = apiKey;
@@ -715,7 +752,7 @@ async function saveSettings() {
     closeModal();
 }
 
-/* ── Utility ──────────────────────────────────────────────── */
+/* Utility */
 
 function closeModal() {
     document.getElementById("modal-root").innerHTML = "";

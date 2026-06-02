@@ -1,4 +1,4 @@
-"""Local ML model for SQL generation — learns from user query history.
+"""Local ML model for SQL generation - learns from user query history.
 
 Architecture:
   1. Stores every successful (question, schema, sql) pair
@@ -7,7 +7,7 @@ Architecture:
   4. Adapts retrieved SQL to current schema using template substitution
   5. Gets smarter with every query the user runs
 
-Zero external API calls — works fully offline.
+Zero external API calls - works fully offline.
 """
 
 from __future__ import annotations
@@ -15,14 +15,12 @@ from __future__ import annotations
 import json
 import re
 import time
-from collections import Counter, defaultdict
-from dataclasses import dataclass, field, asdict
+from collections import Counter
+from dataclasses import asdict, dataclass, field
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Optional
 
-
-# ── Storage ──────────────────────────────────────────────────────────────────
+# Storage
 
 DATA_DIR = Path("ml_data")
 HISTORY_PATH = DATA_DIR / "query_history.jsonl"
@@ -63,7 +61,7 @@ class LocalMLModel:
         self._vocab: set[str] = set()
         self._load()
 
-    # ── Persistence ──────────────────────────────────────────────────────────
+    # Persistence
 
     def _load(self):
         """Load history and patterns from disk."""
@@ -113,7 +111,7 @@ class LocalMLModel:
             json.dumps(stats, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
-    # ── Tokenization & TF-IDF ────────────────────────────────────────────────
+    # Tokenization & TF-IDF
 
     @staticmethod
     def _tokenize(text: str) -> list[str]:
@@ -179,9 +177,9 @@ class LocalMLModel:
             return 0.0
         return dot / (norm_a * norm_b)
 
-    # ── Intent detection ─────────────────────────────────────────────────────
+    # Intent detection
 
-    # Built-in SQL intent patterns (bootstrap — no training needed)
+    # Built-in SQL intent patterns (bootstrap - no training needed)
     _INTENT_MAP = {
         "count": {
             "keywords": [
@@ -220,7 +218,10 @@ class LocalMLModel:
                 "by", "per", "each", "group", "breakdown", "distribution",
                 "по", "для каждого", "разбивка", "распределение",
             ],
-            "template": "SELECT {group_col}, COUNT(*) AS count FROM {table} GROUP BY {group_col} ORDER BY count DESC",
+            "template": (
+                "SELECT {group_col}, COUNT(*) AS count FROM {table} "
+                "GROUP BY {group_col} ORDER BY count DESC"
+            ),
         },
         "filter": {
             "keywords": [
@@ -277,7 +278,7 @@ class LocalMLModel:
         conf = min(scores[best] / 3.0, 0.95)
         return best, conf
 
-    # ── Schema parsing ───────────────────────────────────────────────────────
+    # Schema parsing
 
     @staticmethod
     def _parse_schema(schema: str) -> list[dict]:
@@ -299,7 +300,7 @@ class LocalMLModel:
         return tables
 
     @staticmethod
-    def _find_best_table(tables: list[dict], question: str) -> Optional[dict]:
+    def _find_best_table(tables: list[dict], question: str) -> dict | None:
         """Find the table most relevant to the question."""
         q_lower = question.lower()
         best_table = None
@@ -327,13 +328,16 @@ class LocalMLModel:
     @staticmethod
     def _find_best_column(
         columns: list[dict], question: str, prefer_numeric: bool = False
-    ) -> Optional[str]:
+    ) -> str | None:
         """Find the column most relevant to the question."""
         q_lower = question.lower()
         best_col = None
         best_score = 0.0
 
-        numeric_types = {"integer", "int", "float", "real", "numeric", "decimal", "bigint", "smallint", "double"}
+        numeric_types = {
+            "integer", "int", "float", "real", "numeric",
+            "decimal", "bigint", "smallint", "double",
+        }
 
         for col in columns:
             cname = col["name"].lower()
@@ -366,7 +370,7 @@ class LocalMLModel:
         m = re.search(r"\b(\d{1,4})\b", question)
         return int(m.group(1)) if m else 10
 
-    # ── SQL generation ───────────────────────────────────────────────────────
+    # SQL generation
 
     def generate(
         self, question: str, schema: str, dialect: str = "sqlite"
@@ -410,7 +414,7 @@ class LocalMLModel:
                     similar_questions=similar,
                 )
 
-        # Strategy 3: Best effort — simple SELECT
+        # Strategy 3: Best effort - simple SELECT
         fallback_table = tables[0]["name"]
         return MLResponse(
             sql=f"SELECT * FROM {fallback_table} LIMIT 100",
@@ -421,7 +425,7 @@ class LocalMLModel:
 
     def _find_similar(
         self, question: str, schema: str, dialect: str
-    ) -> Optional[MLResponse]:
+    ) -> MLResponse | None:
         """Find the most similar past query and adapt it."""
         if not self._history:
             return None
@@ -474,7 +478,7 @@ class LocalMLModel:
         if not old_tables or not new_tables:
             return sql
 
-        # Build mapping of old table names → new table names
+        # Build mapping of old table names -> new table names
         table_map = {}
         for ot in old_tables:
             best_match = None
@@ -505,7 +509,7 @@ class LocalMLModel:
         all_tables: list[dict],
         question: str,
         dialect: str,
-    ) -> Optional[str]:
+    ) -> str | None:
         """Build SQL from detected intent and schema."""
         t_name = table["name"]
         columns = table["columns"]
@@ -606,7 +610,7 @@ class LocalMLModel:
 
         return None
 
-    # ── Learning ─────────────────────────────────────────────────────────────
+    # Learning
 
     def learn(
         self,
@@ -687,7 +691,7 @@ class LocalMLModel:
                         current * 0.8 + 0.2
                     )
 
-    # ── Stats ────────────────────────────────────────────────────────────────
+    # Stats
 
     def get_stats(self) -> dict:
         """Return model statistics."""

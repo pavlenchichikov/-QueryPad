@@ -1,9 +1,6 @@
 """Tests for the database manager."""
 
-import os
-import tempfile
 
-import pandas as pd
 import pytest
 
 from querypad.database import DatabaseManager
@@ -98,12 +95,17 @@ class TestDatabaseManager:
 
     def test_execute_with_filter(self, db_manager, sample_db):
         db_manager.add_connection("test1", "Test DB", sample_db)
-        result = db_manager.execute_query("test1", "SELECT * FROM employees WHERE department = 'Engineering'")
+        result = db_manager.execute_query(
+            "test1", "SELECT * FROM employees WHERE department = 'Engineering'"
+        )
         assert result.row_count == 3
 
     def test_execute_aggregate(self, db_manager, sample_db):
         db_manager.add_connection("test1", "Test DB", sample_db)
-        result = db_manager.execute_query("test1", "SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department")
+        result = db_manager.execute_query(
+            "test1",
+            "SELECT department, AVG(salary) as avg_salary FROM employees GROUP BY department",
+        )
         assert result.row_count == 3
 
     def test_execute_join(self, db_manager, sample_db):
@@ -130,3 +132,66 @@ class TestDatabaseManager:
     def test_unknown_connection(self, db_manager):
         with pytest.raises(ValueError):
             db_manager.execute_query("nonexistent", "SELECT 1")
+
+
+class TestReadOnlyGuard:
+    def test_select_allowed(self, db_manager, sample_db):
+        db_manager.add_connection("t", "DB", sample_db)
+        result = db_manager.execute_query(
+            "t", "SELECT * FROM employees", read_only=True
+        )
+        assert result.error is None
+        assert result.row_count == 5
+
+    def test_delete_blocked(self, db_manager, sample_db):
+        db_manager.add_connection("t", "DB", sample_db)
+        result = db_manager.execute_query(
+            "t", "DELETE FROM employees", read_only=True
+        )
+        assert result.error is not None
+        assert "read-only" in result.error.lower()
+
+    def test_delete_allowed_when_off(self, db_manager, sample_db):
+        db_manager.add_connection("t", "DB", sample_db)
+        result = db_manager.execute_query(
+            "t", "DELETE FROM employees WHERE name = 'Bob'", read_only=False
+        )
+        assert result.error is None
+
+
+class TestIsWriteSql:
+    def test_reads(self):
+        from querypad.database import is_write_sql
+        assert is_write_sql("SELECT * FROM t") is False
+        assert is_write_sql("  with x as (select 1) select * from x") is False
+        assert is_write_sql("EXPLAIN SELECT 1") is False
+
+    def test_writes(self):
+        from querypad.database import is_write_sql
+        assert is_write_sql("INSERT INTO t VALUES (1)") is True
+        assert is_write_sql("UPDATE t SET a = 1") is True
+        assert is_write_sql("DROP TABLE t") is True
+        assert is_write_sql("DELETE FROM t") is True
+
+    def test_cte_wrapped_write_blocked(self):
+        from querypad.database import is_write_sql
+        assert is_write_sql("WITH x AS (SELECT 1) DELETE FROM t") is True
+
+    def test_stacked_write_blocked(self):
+        from querypad.database import is_write_sql
+        assert is_write_sql("SELECT 1; DROP TABLE t") is True
+
+
+class TestCsvExport:
+    def test_export_select(self, db_manager, sample_db):
+        db_manager.add_connection("t", "DB", sample_db)
+        error, csv_text = db_manager.query_to_csv("t", "SELECT name FROM employees")
+        assert error is None
+        assert "name" in csv_text
+        assert "Alice" in csv_text
+
+    def test_export_error(self, db_manager, sample_db):
+        db_manager.add_connection("t", "DB", sample_db)
+        error, csv_text = db_manager.query_to_csv("t", "SELECT * FROM nope")
+        assert error is not None
+        assert csv_text == ""

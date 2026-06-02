@@ -7,7 +7,7 @@ import sys
 def main():
     parser = argparse.ArgumentParser(
         prog="querypad",
-        description="QueryPad — SQL notebook with AI assistant",
+        description="QueryPad - SQL notebook with AI assistant",
     )
     parser.add_argument(
         "--host", default="127.0.0.1", help="Host to bind (default: 127.0.0.1)"
@@ -19,7 +19,7 @@ def main():
         "--reload", action="store_true", help="Enable auto-reload for development"
     )
     parser.add_argument(
-        "--version", action="version", version=f"%(prog)s 0.1.0"
+        "--version", action="version", version="%(prog)s 0.1.0"
     )
 
     args = parser.parse_args()
@@ -30,7 +30,7 @@ def main():
         print("Error: uvicorn is required. Install with: pip install querypad")
         sys.exit(1)
 
-    print(f"  QueryPad v0.1.0")
+    print("  QueryPad v0.1.0")
     print(f"  Starting at http://{args.host}:{args.port}")
     print()
 

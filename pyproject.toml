@@ -5,11 +5,11 @@ build-backend = "hatchling.build"
 [project]
 name = "querypad"
 version = "0.1.0"
-description = "SQL notebook with AI assistant — query any database using natural language"
+description = "SQL notebook with AI assistant - query any database using natural language"
 readme = "README.md"
 license = "MIT"
 requires-python = ">=3.10"
-authors = [{ name = "QueryPad Contributors" }]
+authors = [{ name = "Pavel Galashin" }]
 keywords = ["sql", "notebook", "ai", "database", "llm", "natural-language"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -46,9 +46,9 @@ openai = ["openai>=1.30"]
 querypad = "querypad.__main__:main"
 
 [project.urls]
-Homepage = "https://github.com/yourname/querypad"
-Repository = "https://github.com/yourname/querypad"
-Issues = "https://github.com/yourname/querypad/issues"
+Homepage = "https://github.com/pavlenchichikov/querypad"
+Repository = "https://github.com/pavlenchichikov/querypad"
+Issues = "https://github.com/pavlenchichikov/querypad/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/querypad"]

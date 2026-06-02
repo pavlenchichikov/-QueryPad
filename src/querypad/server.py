@@ -1,4 +1,4 @@
-"""FastAPI server — REST API for QueryPad."""
+"""FastAPI server - REST API for QueryPad."""
 
 from __future__ import annotations
 
@@ -10,11 +10,11 @@ from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from querypad.ai import generate_sql, learn_from_execution, get_local_stats
-from querypad.database import DatabaseManager
+from querypad.ai import generate_sql, get_local_stats, learn_from_execution
+from querypad.database import DatabaseManager, is_write_sql
 from querypad.notebook import Cell, Notebook, NotebookStore
 
 STATIC_DIR = Path(__file__).parent / "static"
@@ -23,10 +23,11 @@ db_manager = DatabaseManager()
 nb_store = NotebookStore()
 
 # Settings persisted in memory (can be extended to file)
-_settings: dict[str, str] = {
+_settings: dict[str, Any] = {
     "ai_provider": "anthropic",
     "ai_api_key": os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("OPENAI_API_KEY", ""),
     "ai_model": "",
+    "read_only": False,
 }
 
 
@@ -39,7 +40,7 @@ async def lifespan(application: FastAPI):
 app = FastAPI(title="QueryPad", version="0.1.0", lifespan=lifespan)
 
 
-# ── Connection management ───────────────────────────────────────
+# Connection management
 
 @app.get("/api/connections")
 async def list_connections():
@@ -70,18 +71,37 @@ async def get_schema(conn_id: str):
     return {"schema": db_manager.get_schema_text(conn_id)}
 
 
-# ── Query execution ─────────────────────────────────────────────
+# Query execution
 
 @app.post("/api/query")
 async def run_query(payload: dict[str, Any]):
     conn_id = payload["connection_id"]
     sql = payload["sql"]
     limit = payload.get("limit", 500)
-    result = db_manager.execute_query(conn_id, sql, limit=limit)
+    result = db_manager.execute_query(
+        conn_id, sql, limit=limit, read_only=bool(_settings.get("read_only")),
+    )
     return asdict(result)
 
 
-# ── AI assistant ────────────────────────────────────────────────
+@app.post("/api/query/export")
+async def export_query(payload: dict[str, Any]):
+    """Run a query and stream the full result set as a CSV download."""
+    conn_id = payload["connection_id"]
+    sql = payload["sql"]
+    if bool(_settings.get("read_only")) and is_write_sql(sql):
+        return {"error": "Read-only mode is on: only SELECT-style queries are allowed."}
+    error, csv_text = db_manager.query_to_csv(conn_id, sql)
+    if error:
+        return {"error": error}
+    return StreamingResponse(
+        iter([csv_text]),
+        media_type="text/csv",
+        headers={"Content-Disposition": "attachment; filename=querypad_export.csv"},
+    )
+
+
+# AI assistant
 
 @app.post("/api/ai/generate")
 async def ai_generate(payload: dict[str, Any]):
@@ -136,7 +156,7 @@ async def ai_stats():
     return get_local_stats()
 
 
-# ── Notebook management ─────────────────────────────────────────
+# Notebook management
 
 @app.get("/api/notebooks")
 async def list_notebooks():
@@ -183,13 +203,14 @@ async def delete_notebook(nb_id: str):
     return {"ok": True}
 
 
-# ── Settings ────────────────────────────────────────────────────
+# Settings
 
 @app.get("/api/settings")
 async def get_settings():
     safe = dict(_settings)
-    if safe.get("ai_api_key"):
-        safe["ai_api_key"] = safe["ai_api_key"][:8] + "..." if len(safe["ai_api_key"]) > 8 else "***"
+    key = safe.get("ai_api_key")
+    if key:
+        safe["ai_api_key"] = key[:8] + "..." if len(key) > 8 else "***"
     return safe
 
 
@@ -198,10 +219,12 @@ async def update_settings(payload: dict[str, Any]):
     for key in ("ai_provider", "ai_api_key", "ai_model"):
         if key in payload:
             _settings[key] = payload[key]
+    if "read_only" in payload:
+        _settings["read_only"] = bool(payload["read_only"])
     return {"ok": True}
 
 
-# ── Static files ────────────────────────────────────────────────
+# Static files
 
 @app.get("/")
 async def index():

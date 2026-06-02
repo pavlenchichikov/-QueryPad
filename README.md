@@ -1,6 +1,6 @@
 # QueryPad
 
-SQL notebook with a built-in AI assistant. You type a question in plain English, it writes the query. Or just write SQL yourself — either way, results show up instantly.
+SQL notebook with a built-in AI assistant. You type a question in plain English, it writes the query. Or just write SQL yourself - either way, results show up instantly.
 
 Works with SQLite, PostgreSQL, MySQL, ClickHouse, and anything SQLAlchemy can connect to.
 
@@ -8,9 +8,11 @@ Works with SQLite, PostgreSQL, MySQL, ClickHouse, and anything SQLAlchemy can co
 
 - Notebooks with SQL, Markdown, and AI cells mixed together
 - AI generates SQL from natural language (Claude, GPT, or a local offline model)
-- The local model learns from every query you run — no API key needed
+- The local model learns from every query you run - no API key needed
 - Schema browser so you don't have to memorize table names
 - Charts (bar, line, pie, doughnut) straight from query results
+- Export any result set to CSV
+- Optional read-only mode that blocks INSERT/UPDATE/DELETE/DROP
 - Notebooks auto-save as JSON
 
 ## Getting started
@@ -37,17 +39,21 @@ clickhouse://user:pass@host:8123/dbname
 
 Three options under **Settings**:
 
-- **Local ML** — works offline, no keys, learns as you go
-- **Claude** — needs `ANTHROPIC_API_KEY`
-- **GPT** — needs `OPENAI_API_KEY`
+- **Local ML** - works offline, no keys, learns as you go
+- **Claude** - needs `ANTHROPIC_API_KEY`
+- **GPT** - needs `OPENAI_API_KEY`
 
 If no key is set, it falls back to the local model automatically. Online providers also feed successful results back into the local model, so it keeps improving either way.
+
+Keys can be set in **Settings** or via environment variables. Copy `.env.example` to `.env` and fill them in.
+
+Turn on **Read-only mode** in Settings to block any statement that isn't a plain query (INSERT, UPDATE, DELETE, DROP, etc.) - useful when you let the AI run queries against a production database.
 
 ## How the local model works
 
 1. Checks past queries for similar questions (TF-IDF + cosine similarity)
 2. If nothing matches well, detects intent (count, top N, average, group by, etc.) and maps it to your schema
-3. Last resort — `SELECT * FROM table LIMIT 100`
+3. Last resort - `SELECT * FROM table LIMIT 100`
 
 Training data lives in `ml_data/` and grows on its own.
 
@@ -55,12 +61,12 @@ Training data lives in `ml_data/` and grows on its own.
 
 ```
 src/querypad/
-  server.py       — FastAPI app
-  database.py     — connection manager
-  notebook.py     — notebook storage
-  ai.py           — LLM integration
-  ml_local.py     — local ML model
-  static/         — web UI
+  server.py       - FastAPI app
+  database.py     - connection manager
+  notebook.py     - notebook storage
+  ai.py           - LLM integration
+  ml_local.py     - local ML model
+  static/         - web UI
 ```
 
 ## License

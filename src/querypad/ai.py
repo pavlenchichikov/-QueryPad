@@ -1,4 +1,4 @@
-"""AI assistant — natural language to SQL translation."""
+"""AI assistant - natural language to SQL translation."""
 
 from __future__ import annotations
 
@@ -9,7 +9,8 @@ import httpx
 
 from querypad.ml_local import get_model as _get_local_model
 
-SYSTEM_PROMPT = """You are a SQL expert assistant. Given a database schema and a user's question in natural language, generate a SQL query that answers the question.
+SYSTEM_PROMPT = """You are a SQL expert assistant. Given a database schema and a user's
+question in natural language, generate a SQL query that answers the question.
 
 Rules:
 - Return ONLY the SQL query, no explanations
@@ -41,7 +42,7 @@ async def generate_sql(
 ) -> AIResponse:
     """Convert a natural language question to SQL using an LLM or local ML."""
 
-    # Local ML — no API key needed
+    # Local ML - no API key needed
     if provider == "local":
         return _generate_local(question, schema, dialect)
 
@@ -52,7 +53,12 @@ async def generate_sql(
         if result.sql:
             result.model += " (auto-fallback, no API key)"
             return result
-        return AIResponse(sql="", model="", error="No API key configured and local ML couldn't generate SQL. Set ANTHROPIC_API_KEY or OPENAI_API_KEY in Settings, or use Local ML provider.")
+        return AIResponse(
+            sql="", model="",
+            error="No API key configured and local ML couldn't generate SQL. "
+                  "Set ANTHROPIC_API_KEY or OPENAI_API_KEY in Settings, "
+                  "or use Local ML provider.",
+        )
 
     user_msg = f"""Database dialect: {dialect}
 
@@ -64,7 +70,7 @@ Question: {question}
 Write the SQL query:"""
 
     if provider == "anthropic":
-        result = await _call_anthropic(key, user_msg, model or "claude-sonnet-4-20250514")
+        result = await _call_anthropic(key, user_msg, model or "claude-sonnet-4-6")
     elif provider == "openai":
         result = await _call_openai(key, user_msg, model or "gpt-4o-mini")
     else:

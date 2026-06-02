@@ -1,4 +1,4 @@
-"""Notebook storage — JSON-based cell notebooks."""
+"""Notebook storage - JSON-based cell notebooks."""
 
 from __future__ import annotations
 

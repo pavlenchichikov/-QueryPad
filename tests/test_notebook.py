@@ -1,6 +1,5 @@
 """Tests for the notebook storage."""
 
-import os
 
 import pytest
 

@@ -486,9 +486,9 @@ async function aiGenerate(index) {
         if (data.confidence > 0) {
             const pct = Math.round(data.confidence * 100);
             const color = pct >= 70 ? "#38a169" : pct >= 40 ? "#ed8936" : "#e53e3e";
-            confBadge = ` · <span style="color:${color}">confidence: ${pct}%</span>`;
+            confBadge = ` | <span style="color:${color}">confidence: ${pct}%</span>`;
         }
-        let sourceBadge = data.source ? ` · <span style="color:var(--text-dim)">${data.source}</span>` : "";
+        let sourceBadge = data.source ? ` | <span style="color:var(--text-dim)">${data.source}</span>` : "";
 
         // Show similar past questions if any
         let similarHtml = "";

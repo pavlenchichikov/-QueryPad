@@ -7,7 +7,7 @@ from dataclasses import dataclass, field
 
 from querypad.ml.synonyms import column_hint
 
-# phrase -> SQL operator
+# phrase to SQL operator
 _OPS = [
     (r"\b(more than|greater than|over|above|bolshe|svyshe|bolee)\b", ">"),
     (r"\b(less than|under|below|fewer than|menshe|menee)\b", "<"),

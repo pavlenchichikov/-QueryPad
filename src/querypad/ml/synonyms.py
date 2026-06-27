@@ -4,7 +4,7 @@ Static and explicit on purpose - no model. Used to make lexical retrieval
 generalize and to map words like 'profitable'/'dokhod' onto numeric columns."""
 from __future__ import annotations
 
-# canonical -> surface variants (lowercased, ASCII transliteration for RU)
+# canonical to surface variants (lowercased, ASCII transliteration for RU)
 _GROUPS = {
     "count": ["count", "number", "how many", "skolko", "kolichestvo", "chislo"],
     "average": ["average", "avg", "mean", "srednee", "sredn", "sredniy"],
@@ -16,7 +16,7 @@ _GROUPS = {
     "unique": ["unique", "distinct", "different", "unikaln", "razlichn"],
 }
 
-# word -> column semantic tag
+# word to column semantic tag
 _HINT = {}
 for _tag, _key in (("money", "money"), ("avg", "average"),
                    ("count", "count"), ("time", "time")):

@@ -1,0 +1,74 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 340" width="1280" height="340" role="img" aria-label="QueryPad - a SQL notebook that speaks plain English">
+  <defs>
+    <linearGradient id="paper" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8f3ea"/>
+      <stop offset="0.55" stop-color="#f2e9d8"/>
+      <stop offset="1" stop-color="#ece1cd"/>
+    </linearGradient>
+    <pattern id="dots" width="22" height="22" patternUnits="userSpaceOnUse">
+      <circle cx="2" cy="2" r="1" fill="#232a30" fill-opacity="0.06"/>
+    </pattern>
+    <filter id="card" x="-20%" y="-20%" width="140%" height="160%">
+      <feDropShadow dx="0" dy="10" stdDeviation="14" flood-color="#5a4a2a" flood-opacity="0.18"/>
+    </filter>
+    <linearGradient id="fold" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#e3d6bb"/>
+      <stop offset="1" stop-color="#cbbd9c"/>
+    </linearGradient>
+  </defs>
+
+  <rect width="1280" height="340" fill="url(#paper)"/>
+  <rect width="1280" height="340" fill="url(#dots)"/>
+
+  <line x1="46" y1="0" x2="46" y2="340" stroke="#c2773f" stroke-opacity="0.35" stroke-width="1.5"/>
+  <line x1="52" y1="0" x2="52" y2="340" stroke="#c2773f" stroke-opacity="0.18" stroke-width="1"/>
+
+  <path d="M1280 0 L1280 56 L1224 0 Z" fill="url(#fold)"/>
+  <path d="M1224 0 L1280 56" stroke="#b6a884" stroke-width="1" fill="none"/>
+
+  <text x="84" y="74" font-family="'JetBrains Mono','Consolas',monospace" font-size="13"
+        letter-spacing="5" fill="#9a8f73">SQL NOTEBOOK</text>
+
+  <text x="80" y="168" font-family="'Fraunces','Playfair Display','Georgia',serif"
+        font-weight="700" font-size="78" fill="#232a30">Query<tspan fill="#1f7a6b">Pad</tspan></text>
+  <rect x="468" y="124" width="14" height="46" fill="#1f7a6b" opacity="0.9"/>
+
+  <text x="84" y="210" font-family="'Fraunces','Georgia',serif" font-style="italic"
+        font-size="20" fill="#5b5544">Ask in plain language. It writes the SQL.</text>
+
+  <text x="84" y="252" font-family="'JetBrains Mono','Consolas',monospace" font-size="13"
+        letter-spacing="1" fill="#8c8675">SQLite . Postgres . MySQL . ClickHouse</text>
+
+  <g filter="url(#card)">
+    <rect x="556" y="46" width="668" height="248" rx="14" fill="#fffdf9" stroke="#e7ddc8" stroke-width="1.5"/>
+  </g>
+
+  <rect x="580" y="70" width="40" height="20" rx="10" fill="#1f7a6b"/>
+  <text x="600" y="84" text-anchor="middle" font-family="'JetBrains Mono','Consolas',monospace"
+        font-size="11" letter-spacing="1" fill="#fffdf9">AI</text>
+  <text x="632" y="85" font-family="'JetBrains Mono','Consolas',monospace" font-size="12"
+        letter-spacing="1" fill="#a89e85">english / русский</text>
+  <g fill="#d9cdb2">
+    <circle cx="1180" cy="80" r="4"/><circle cx="1196" cy="80" r="4"/><circle cx="1212" cy="80" r="4"/>
+  </g>
+
+  <text x="588" y="124" font-family="'Fraunces','Georgia',serif" font-style="italic" font-size="22" fill="#3a4048">
+    <tspan fill="#1f7a6b" font-style="normal" font-family="'JetBrains Mono',monospace">&gt; </tspan>top 5 customers by revenue</text>
+
+  <line x1="588" y1="142" x2="1192" y2="142" stroke="#efe6d2" stroke-width="1.5"/>
+  <text x="588" y="166" font-family="'JetBrains Mono','Consolas',monospace" font-size="12"
+        letter-spacing="2" fill="#b9af95">GENERATED SQL</text>
+
+  <g font-family="'JetBrains Mono','Consolas',monospace" font-size="20">
+    <text x="588" y="198"><tspan fill="#1f7a6b">SELECT</tspan><tspan fill="#3a4048"> name, revenue</tspan></text>
+    <text x="588" y="226"><tspan fill="#1f7a6b">FROM</tspan><tspan fill="#3a4048"> customers</tspan></text>
+    <text x="588" y="254"><tspan fill="#1f7a6b">ORDER BY</tspan><tspan fill="#3a4048"> revenue </tspan><tspan fill="#1f7a6b">DESC</tspan><tspan fill="#3a4048">  </tspan><tspan fill="#1f7a6b">LIMIT</tspan><tspan fill="#c2772b"> 5</tspan><tspan fill="#3a4048">;</tspan></text>
+  </g>
+
+  <rect x="1066" y="240" width="126" height="26" rx="13" fill="#f3ece0" stroke="#e2d6bd" stroke-width="1"/>
+  <circle cx="1083" cy="253" r="4" fill="#1f7a6b"/>
+  <text x="1095" y="257" font-family="'JetBrains Mono','Consolas',monospace" font-size="11"
+        letter-spacing="1" fill="#6f8a7f">offline local-ML</text>
+
+  <rect x="8" y="8" width="1264" height="324" rx="8" fill="none" stroke="#cbbd9c" stroke-opacity="0.6" stroke-width="1.5"/>
+</svg>

@@ -366,6 +366,7 @@ async function runCell(index) {
                     connection_id: activeConnectionId,
                     question: cell._aiQuestion,
                     sql: sql,
+                    ai_sql: cell._generatedSql || null,
                     row_count: data.row_count || 0,
                 }),
             }).catch(() => {});  // fire-and-forget

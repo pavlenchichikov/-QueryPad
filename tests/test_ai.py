@@ -43,6 +43,21 @@ def test_learn_from_execution(isolated_ml):
     assert stats.get("total_examples", 0) >= 1
 
 
+def test_learn_from_execution_with_ai_sql_marks_corrected(isolated_ml):
+    """The corrections hook: when the executed sql differs from the
+    AI-generated sql passed through ai_sql, the learned example records the
+    correction (used to upweight it during retrieval)."""
+    ai.learn_from_execution(
+        question="count active employees",
+        sql="SELECT COUNT(*) FROM employees WHERE active = 1",
+        schema=SAMPLE_SCHEMA,
+        row_count=3,
+        ai_sql="SELECT COUNT(*) FROM employees",
+    )
+    model = ai._get_local_model()
+    assert model._history[-1]["corrected"] is True
+
+
 def test_get_local_stats_shape(isolated_ml):
     stats = ai.get_local_stats()
     assert "total_examples" in stats

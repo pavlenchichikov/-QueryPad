@@ -1,5 +1,6 @@
-"""Tests for the offline local ML model."""
+"""Tests for the offline local ML model (public API via the ml_local shim)."""
 
+from querypad.ml import model as ml_model
 from tests.conftest import SAMPLE_SCHEMA
 
 
@@ -31,6 +32,15 @@ def test_average_intent(isolated_ml):
     assert "AVG(" in res.sql.upper()
 
 
+def test_most_profitable_orders_by_money(isolated_ml):
+    """Updated expectation: the slot-filling pipeline now orders by the
+    money-hinted numeric column instead of dumping a plain LIMIT 100."""
+    model = isolated_ml.LocalMLModel()
+    res = model.generate("show me the most profitable employees", SAMPLE_SCHEMA)
+    assert "ORDER BY salary DESC" in res.sql
+    assert "employees" in res.sql
+
+
 def test_empty_question(isolated_ml):
     model = isolated_ml.LocalMLModel()
     res = model.generate("   ", SAMPLE_SCHEMA)
@@ -52,7 +62,7 @@ def test_learn_persists_and_grows(isolated_ml):
         schema="TABLE orders: id (INTEGER)",
     )
     assert len(model._history) == 1
-    assert isolated_ml.HISTORY_PATH.exists()
+    assert ml_model.HISTORY_PATH.exists()
 
 
 def test_learn_skips_duplicates(isolated_ml):
@@ -86,16 +96,27 @@ def test_stats(isolated_ml):
     assert "intent_distribution" in stats
 
 
-def test_tokenize():
-    from querypad.ml_local import LocalMLModel
-    tokens = LocalMLModel._tokenize("How MANY, employees?")
-    assert "how" in tokens
-    assert "many" in tokens
-    assert "employees" in tokens
+def test_learn_with_ai_sql_marks_corrected(isolated_ml):
+    """Public-facing corrections hook: when the executed sql differs from the
+    AI-generated sql, the example is flagged as corrected (boosts retrieval
+    weight); when it matches, it is not."""
+    model = isolated_ml.LocalMLModel()
+    model.learn(
+        question="count of orders",
+        sql="SELECT COUNT(*) FROM orders WHERE id > 0",
+        schema="TABLE orders: id (INTEGER)",
+        was_executed=True,
+        row_count=3,
+        ai_sql="SELECT COUNT(*) FROM orders",
+    )
+    assert model._history[0]["corrected"] is True
 
-
-def test_parse_schema():
-    from querypad.ml_local import LocalMLModel
-    tables = LocalMLModel._parse_schema(SAMPLE_SCHEMA)
-    names = {t["name"] for t in tables}
-    assert names == {"employees", "departments"}
+    model.learn(
+        question="count of orders again",
+        sql="SELECT COUNT(*) FROM orders",
+        schema="TABLE orders: id (INTEGER)",
+        was_executed=True,
+        row_count=3,
+        ai_sql="SELECT COUNT(*) FROM orders",
+    )
+    assert model._history[1]["corrected"] is False

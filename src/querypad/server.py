@@ -129,6 +129,7 @@ async def ai_learn(payload: dict[str, Any]):
     question = payload.get("question", "")
     sql = payload.get("sql", "")
     row_count = payload.get("row_count", 0)
+    ai_sql = payload.get("ai_sql")
 
     if not question or not sql:
         return {"ok": False, "error": "question and sql required"}
@@ -145,7 +146,7 @@ async def ai_learn(payload: dict[str, Any]):
 
     learn_from_execution(
         question=question, sql=sql, schema=schema,
-        dialect=dialect, row_count=row_count,
+        dialect=dialect, row_count=row_count, ai_sql=ai_sql,
     )
     return {"ok": True}
 

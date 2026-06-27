@@ -106,14 +106,14 @@ def _generate_local(question: str, schema: str, dialect: str) -> AIResponse:
 
 def learn_from_execution(
     question: str, sql: str, schema: str, dialect: str = "sqlite",
-    row_count: int = 0,
+    row_count: int = 0, ai_sql: str | None = None,
 ):
     """Teach the local model from a successfully executed query."""
     try:
         ml = _get_local_model()
         ml.learn(
             question=question, sql=sql, schema=schema, dialect=dialect,
-            was_executed=True, row_count=row_count,
+            was_executed=True, row_count=row_count, ai_sql=ai_sql,
         )
     except Exception:
         pass

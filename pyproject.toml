@@ -7,7 +7,7 @@ name = "querypad"
 version = "0.1.0"
 description = "SQL notebook with AI assistant - query any database using natural language"
 readme = "README.md"
-license = "MIT"
+license = "CC-BY-NC-4.0"
 requires-python = ">=3.10"
 authors = [{ name = "Pavel Galashin" }]
 keywords = ["sql", "notebook", "ai", "database", "llm", "natural-language"]
@@ -15,7 +15,7 @@ classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
     "Intended Audience :: Science/Research",
-    "License :: OSI Approved :: MIT License",
+    "License :: Other/Proprietary License",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",

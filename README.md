@@ -44,4 +44,4 @@ Enable **read-only mode** in Settings to reject anything but plain queries
 
 ## License
 
-MIT
+Creative Commons Attribution-NonCommercial 4.0 (CC BY-NC 4.0). See `LICENSE`.
